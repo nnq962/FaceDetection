@@ -1,62 +1,51 @@
 import os
 import json
-from deepface import DeepFace
+import cv2
+import insightface
 
 # Thư mục chứa ảnh
-root_dir = 'photos'
+root_dir = 'database'
 
 # Thư mục chứa embedding
 embedding_dir = 'embeddings'
 if not os.path.exists(embedding_dir):
     os.makedirs(embedding_dir)
+
+# Khởi tạo mô hình InsightFace
+model = insightface.app.FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+model.prepare(ctx_id=0)
 
 # Duyệt qua từng thư mục (mỗi thư mục là một người)
 for person_name in os.listdir(root_dir):
     person_dir = os.path.join(root_dir, person_name)
-    
+
+    # Danh sách để lưu tất cả embeddings cho mỗi người
+    embeddings_list = []
+
     # Duyệt qua từng ảnh trong thư mục
-    for i, image_name in enumerate(os.listdir(person_dir)):
+    for image_name in os.listdir(person_dir):
         image_path = os.path.join(person_dir, image_name)
-        
-        # Lấy embedding
-        embedding = DeepFace.represent(img_path=image_path, model_name='Facenet')
 
-        # Lưu embedding ra file JSON
-        file_name = f"{person_name}_embedding_{i}.json"
-        file_path = os.path.join(embedding_dir, file_name)
-        
-        with open(file_path, 'w') as f:
-            json.dump(embedding, f)
+        # Đọc ảnh sử dụng OpenCV
+        image = cv2.imread(image_path)
+        faces = model.get(image)
 
-"""
-lay embedding cho toan bo anh
+        if len(faces) > 0:  # Nếu phát hiện khuôn mặt và có embedding
+            embedding = faces[0].embedding.tolist()  # Lấy embedding và chuyển sang list để lưu JSON
 
-import os
-import json
-from deepface import DeepFace
+            # Thêm embedding và tên hình ảnh vào danh sách
+            embeddings_list.append({
+                "image_name": image_name,
+                "embedding": embedding
+            })
+        else:
+            print(f"Không tìm thấy khuôn mặt trong ảnh {image_name}")
 
-# Thư mục chứa ảnh
-root_dir = 'photos'
-
-# Thư mục chứa embedding
-embedding_dir = 'embeddings'
-if not os.path.exists(embedding_dir):
-    os.makedirs(embedding_dir)
-
-# Duyệt qua toàn bộ ảnh mà không cần phân loại trước
-for i, image_name in enumerate(os.listdir(root_dir)):
-    image_path = os.path.join(root_dir, image_name)
-    
-    # Lấy embedding
-    embedding = DeepFace.represent(img_path=image_path, model_name='Facenet')
-
-    # Lấy tên người từ tên file (giả sử ảnh được đặt tên theo người, ví dụ: john_doe_01.jpg)
-    person_name = image_name.split('_')[0]
-    
-    # Lưu embedding ra file JSON
-    file_name = f"{person_name}_embedding_{i}.json"
+    # Sau khi xử lý xong tất cả các ảnh của một người, lưu danh sách embeddings vào file JSON
+    file_name = f"{person_name}_embeddings.json"
     file_path = os.path.join(embedding_dir, file_name)
-    
+
     with open(file_path, 'w') as f:
-        json.dump(embedding, f)
-"""
+        json.dump({"name": person_name, "embeddings": embeddings_list}, f)
+
+    print(f"Đã lưu embeddings cho {person_name} vào {file_name}")

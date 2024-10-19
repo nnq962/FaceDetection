@@ -1,45 +1,82 @@
+import faiss
+import numpy as np
+import cv2
 import os
 import json
-import pandas as pd
-from deepface import DeepFace
+import insightface
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Đường dẫn đến thư mục chứa các embedding đã lưu
+# Hàm tính cosine similarity
+def calculate_cosine_similarity(vector1, vector2):
+    vector1 = np.expand_dims(vector1, axis=0)
+    vector2 = np.expand_dims(vector2, axis=0)
+    return cosine_similarity(vector1, vector2)[0][0]
+
+# Khởi tạo mô hình InsightFace
+model = insightface.app.FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+model.prepare(ctx_id=0)
+
+# Đường dẫn tới thư mục chứa embeddings và FAISS index
 embedding_dir = 'embeddings'
-metadata_file = 'metadata.csv'
 
-# 1. Trích xuất embedding từ ảnh bạn muốn so sánh
-test_image_path = 'faker.jpg'
-test_embedding = DeepFace.represent(img_path=test_image_path, model_name='Facenet')[0]["embedding"]
+# Tạo FAISS index (sử dụng L2)
+dimension = 512  # Độ dài vector embedding
+index = faiss.IndexFlatL2(dimension)
 
-# 2. Đọc metadata từ file CSV
-metadata = pd.read_csv(metadata_file)
+# Danh sách để lưu tên của từng embedding
+embedding_names = []
+embeddings = []
 
-# Ngưỡng xác định giống nhau (tùy chỉnh)
-similarity_threshold = 0.6
+# Tải các embeddings từ JSON và thêm vào FAISS index
+for json_file in os.listdir(embedding_dir):
+    if json_file.endswith('.json'):
+        file_path = os.path.join(embedding_dir, json_file)
 
-# Biến cờ để kiểm tra xem có tìm thấy sự trùng khớp không
-found_match = False
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            person_name = data['name']
+            embeddings_list = data['embeddings']
 
-# 3. Duyệt qua các hàng trong metadata để so sánh
-for index, row in metadata.iterrows():
-    embedding_path = row['Path']  # Lấy đường dẫn từ cột 'Path'
-    
-    # Nạp embedding từ file JSON
-    with open(embedding_path, 'r') as f:
-        stored_embedding = json.load(f)[0]["embedding"]
+            for embedding_data in embeddings_list:
+                embedding = np.array(embedding_data['embedding'], dtype=np.float32)
+                
+                # Thêm embedding vào FAISS index
+                index.add(np.expand_dims(embedding, axis=0))
+                embedding_names.append(person_name)
+                embeddings.append(embedding)
 
-    # 4. So sánh embedding từ ảnh với embedding đã lưu
-    similarity = cosine_similarity([test_embedding], [stored_embedding])[0][0]  # Tính cosine similarity
-    
-    # 5. Đánh giá mức độ giống nhau
-    if similarity > similarity_threshold:
-        print("===========================================================")
-        print(f"Ảnh trùng khớp với thông tin của {row['Name']} (ID: {row['ID']}). Độ tương đồng: {similarity}")
-        found_match = True  # Đánh dấu là đã tìm thấy sự trùng khớp
-        break  # Dừng lại nếu đã tìm thấy sự trùng khớp
+# Hàm tìm kiếm với FAISS và sau đó so sánh kỹ hơn bằng cosine similarity
+def search_with_faiss_and_cosine(image_path, threshold=0.7):
+    # Trích xuất embedding từ ảnh cần tìm kiếm
+    image = cv2.imread(image_path)
+    faces = model.get(image)
 
-# Nếu không có sự trùng khớp nào
-if not found_match:
-    print("===========================================================")
-    print("Không tìm thấy data về ảnh này.")
+    if len(faces) > 0:
+        query_embedding = faces[0].embedding.astype(np.float32)
+        query_embedding = np.expand_dims(query_embedding, axis=0)
+
+        # Tìm top-k (ví dụ top-5) kết quả gần nhất từ FAISS
+        k = 5
+        distances, indices = index.search(query_embedding, k)
+
+        match_found = False
+
+        # So sánh với cosine similarity và áp dụng ngưỡng
+        for idx in indices[0]:
+            candidate_embedding = embeddings[idx]
+            similarity = calculate_cosine_similarity(query_embedding[0], candidate_embedding)
+
+            if similarity >= threshold:
+                match_found = True
+                print(f"Hình ảnh được xác định là: {embedding_names[idx]} với cosine similarity {similarity}")
+                break  # Dừng lại khi đã tìm thấy người có cosine similarity >= threshold
+
+        if not match_found:
+            print("Không tìm thấy người nào trong database với độ tương đồng đủ lớn.")
+    else:
+        print("Không phát hiện được khuôn mặt trong ảnh mới.")
+
+# Đường dẫn tới ảnh cần tìm kiếm
+image_path = 'faker.jpg'
+# Gọi hàm với ngưỡng cosine similarity = 0.7
+search_with_faiss_and_cosine(image_path, threshold=0.7)

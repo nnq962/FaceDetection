@@ -1,0 +1,5 @@
+Name,ID,Path
+binh,0,merged_embeddings/binh_embeddings.json
+john,0,merged_embeddings/john_embeddings.json
+faker,0,merged_embeddings/faker_embeddings.json
+quyet,0,merged_embeddings/quyet_embeddings.json
