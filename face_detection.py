@@ -33,6 +33,51 @@ class SSDFaceDetectorOpenCV:
 
             if confidence > self.threshold:
                 box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-                faces.append(box.astype(int))
+                (left, top, right, bottom) = box.astype(int)
+                
+                # Đổi lại thứ tự từ (left, top, right, bottom) sang (top, right, bottom, left)
+                faces.append((top, right, bottom, left))
+
 
         return faces
+
+    def extract_faces(self, frame):
+        """
+        Cắt các khuôn mặt từ frame dựa trên kết quả SSD detect.
+        :param frame: Frame hình ảnh từ camera hoặc file.
+        :return: Danh sách các khuôn mặt đã được cắt từ frame.
+        """
+        faces = self.detect_faces(frame)  # Gọi hàm detect_faces để lấy bounding boxes
+
+        extracted_faces = []
+        for box in faces:
+            startX, startY, endX, endY = box
+
+            # Cắt khuôn mặt từ frame
+            face = frame[startY:endY, startX:endX]
+
+            # Kiểm tra kích thước khuôn mặt (loại bỏ nếu quá nhỏ)
+            if face.shape[0] > 0 and face.shape[1] > 0:
+                extracted_faces.append(face)
+
+        return extracted_faces
+
+    def test_extract_faces(self, image_path):
+        """
+        Hàm test: load ảnh từ đường dẫn và hiển thị tất cả các khuôn mặt đã được cắt.
+        :param image_path: Đường dẫn tới file hình ảnh.
+        """
+        # Đọc ảnh từ file
+        frame = cv2.imread(image_path)
+        
+        # Extract faces
+        faces = self.extract_faces(frame)
+        print("so luong mat: ", len(faces))
+
+        # Hiển thị từng khuôn mặt
+        for i, face in enumerate(faces):
+            cv2.imshow(f"Face {i+1}", face)
+            cv2.waitKey(0)  # Nhấn phím bất kỳ để đóng cửa sổ ảnh
+
+        # Đóng tất cả các cửa sổ ảnh
+        cv2.destroyAllWindows()
