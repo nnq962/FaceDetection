@@ -41,25 +41,26 @@ class CameraManager:
         return self.face_detection.detect_faces(frame)
 
     @staticmethod
-    def draw_faces(frame, boxes):
+    def draw_faces(frame, boxes, names):
         """
         Vẽ các bounding box khuôn mặt lên frame và thêm tên người.
         :param frame: Frame từ camera.
         :param boxes: Danh sách tọa độ các bounding box khuôn mặt.
+        :param names: Danh sách tên tương ứng với các khuôn mặt.
         :return: Frame với bounding box khuôn mặt và tên người.
         """
-        for box in boxes:
-            y1, x2, y2, x1 = [int(b) for b in box]
-            
+        for i, box in enumerate(boxes):
+            x1, y1, x2, y2 = [int(b) for b in box]
+
             # Vẽ bounding box quanh khuôn mặt
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 1)
-            
-            # Gắn tên tạm thời "Test Name" lên bounding box
-            name = "Test Name"
+
+            # Gắn tên lên bounding box
+            name = names[i] if i < len(names) else "Unknown"
             font_scale = 0.5
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(frame, name, (x1, y1 - 10), font, font_scale, (0, 0, 255), 1)
-        
+
         return frame
 
     def release(self):

@@ -1,40 +1,75 @@
-import cv2
 import os
+import json
+import cv2
+import face_detection
+import extract_embeddings
+import numpy as np
 
-# Tạo thư mục để lưu ảnh nếu chưa có
-save_dir = "data_face_nnq"
-if not os.path.exists(save_dir):
-    os.makedirs(save_dir)
+# Khởi tạo các đối tượng cần thiết
+get_embs = extract_embeddings.FaceEmbeddingExtractor()
+ssd = face_detection.SSDFaceDetectorOpenCV()
 
-# Khởi động webcam
-cap = cv2.VideoCapture(0)
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+# Đường dẫn thư mục
+database_path = "database"
+output_path = "embeddings"
 
-count = 0
+# Tạo thư mục output nếu chưa tồn tại
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
 
-while True:
-    ret, frame = cap.read()
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
-    # Nhận diện khuôn mặt
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-    
-    for (x, y, w, h) in faces:
-        # Vẽ hình chữ nhật bao quanh khuôn mặt
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-        
-        # Lưu khuôn mặt
-        face = gray[y:y + h, x:x + w]
-        file_name = os.path.join(save_dir, f"face_{count}.jpg")
-        cv2.imwrite(file_name, face)
-        count += 1
 
-    # Hiển thị video với khuôn mặt được nhận diện
-    cv2.imshow('Collecting Faces', frame)
+def extract_embeddings_from_image(image_path):
+    image = cv2.imread(image_path)
+    # Phát hiện vị trí khuôn mặt
+    face_locations = ssd.detect_faces(image)
+    if len(face_locations):
+        return get_embs.extract_embeddings(image, face_locations)
+    else:
+        print(f"No face detected in {image_path}")
+        return []
 
-    # Nhấn 'q' để dừng
-    if cv2.waitKey(1) & 0xFF == ord('q') or count >= 200:  # Lưu 100 ảnh
-        break
 
-cap.release()
-cv2.destroyAllWindows()
+def convert_ndarray_to_list(ndarrays):
+    """
+    Chuyển đổi các ndarray thành list để có thể lưu dưới dạng JSON.
+    :param ndarrays: Danh sách các ndarray.
+    :return: Danh sách các list đã chuyển đổi.
+    """
+    return [ndarray.tolist() for ndarray in ndarrays]
+
+
+def process_database():
+    for person_name in os.listdir(database_path):
+        person_dir = os.path.join(database_path, person_name)
+
+        # Kiểm tra xem thư mục con có tồn tại không (chứa ảnh)
+        if os.path.isdir(person_dir):
+            embeddings_list = []
+
+            # Duyệt qua tất cả các hình ảnh trong thư mục của mỗi người
+            for image_name in os.listdir(person_dir):
+                image_path = os.path.join(person_dir, image_name)
+
+                # Trích xuất embeddings
+                embeddings = extract_embeddings_from_image(image_path)
+
+                if embeddings:
+                    # Chuyển đổi từ ndarray sang list để lưu JSON
+                    embeddings_list.extend(convert_ndarray_to_list(embeddings))
+
+            # Lưu các embeddings vào file JSON
+            if embeddings_list:
+                output_file = os.path.join(output_path, f"{person_name}.json")
+                data = {
+                    "name": person_name,
+                    "embeddings": embeddings_list
+                }
+                with open(output_file, 'w') as json_file:
+                    json.dump(data, json_file, indent=4)
+                print(f"Saved embeddings for {person_name} to {output_file}")
+            else:
+                print(f"No embeddings found for {person_name}")
+
+
+if __name__ == "__main__":
+    process_database()

@@ -5,7 +5,7 @@ prototxt_path = "ssd_model/deploy.prototxt"
 model_path = "ssd_model/res10_300x300_ssd_iter_140000.caffemodel"
 
 class SSDFaceDetectorOpenCV:
-    def __init__(self, threshold=0.65):
+    def __init__(self, threshold=0.6):
         """
         Khởi tạo SSD face detector.
         :param threshold: Ngưỡng để quyết định khuôn mặt (mặc định là 0.5).
@@ -33,11 +33,7 @@ class SSDFaceDetectorOpenCV:
 
             if confidence > self.threshold:
                 box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-                (left, top, right, bottom) = box.astype(int)
-                
-                # Đổi lại thứ tự từ (left, top, right, bottom) sang (top, right, bottom, left)
-                faces.append((top, right, bottom, left))
-
+                faces.append(box.astype(int))
 
         return faces
 
@@ -51,10 +47,10 @@ class SSDFaceDetectorOpenCV:
 
         extracted_faces = []
         for box in faces:
-            startX, startY, endX, endY = box
+            start_x, start_y, end_x, end_y = box
 
             # Cắt khuôn mặt từ frame
-            face = frame[startY:endY, startX:endX]
+            face = frame[start_y:end_y, start_x:end_x]
 
             # Kiểm tra kích thước khuôn mặt (loại bỏ nếu quá nhỏ)
             if face.shape[0] > 0 and face.shape[1] > 0:
