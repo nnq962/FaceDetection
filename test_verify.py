@@ -1,11 +1,11 @@
 import numpy as np
-import face_detection
+import ssd_detect
 import extract_embeddings
 import cv2
 import face_recognition
 import time
 
-ssd = face_detection.SSDFaceDetectorOpenCV()
+ssd = ssd_detect.SSDFaceDetectorOpenCV()
 get_emb = extract_embeddings.FaceEmbeddingExtractor()
 
 list_embeddings_known = [

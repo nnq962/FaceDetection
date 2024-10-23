@@ -1,20 +1,38 @@
 import cv2
 import extract_embeddings
-import face_detection
+import ssd_detect
+import mtcnn_detect
+import mediapipe_detect
 
 class CameraManager:
-    def __init__(self, camera_id=0, frame_width=640, frame_height=480):
+    def __init__(self, camera_id=0, frame_width=640, frame_height=480, detector=None):
         """
         Khởi tạo camera manager với các thông số camera.
         :param camera_id: ID của camera (mặc định là 0).
         :param frame_width: Chiều rộng khung hình (mặc định 640).
         :param frame_height: Chiều cao khung hình (mặc định 480).
         """
-        self.cap = cv2.VideoCapture(camera_id)
+        self.cap = cv2.VideoCapture(camera_id) 
+        if not self.cap.isOpened():
+            raise ValueError("Cannot open camera")
+        
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
-        self.face_detection = face_detection.SSDFaceDetectorOpenCV(0.5)
+        
         self.get_embeddings = extract_embeddings.FaceEmbeddingExtractor()
+        
+        # Xác định detector
+        if detector is None or 'ssd':
+            self.face_detection = ssd_detect.SSDFaceDetectorOpenCV()
+        elif detector == 'mediapipe':
+            self.face_detection = mediapipe_detect.MediapipeDetector()
+        elif detector == 'mtcnn':
+            self.face_detection = mtcnn_detect.MTCNNFaceDetector()
+        else:
+            raise ValueError("Unknown detector type")
+        
+        print("================", detector, "================")
+
         self.embeddings = None
 
     def get_frame(self, flip_code=None):
@@ -49,6 +67,10 @@ class CameraManager:
         :param names: Danh sách tên tương ứng với các khuôn mặt.
         :return: Frame với bounding box khuôn mặt và tên người.
         """
+
+        if boxes is None or len(boxes) == 0:
+            return frame  # Nếu không có khuôn mặt nào thì trả về frame ban đầu
+
         for i, box in enumerate(boxes):
             x1, y1, x2, y2 = [int(b) for b in box]
 
@@ -57,7 +79,7 @@ class CameraManager:
 
             # Gắn tên lên bounding box
             name = names[i] if i < len(names) else "Unknown"
-            font_scale = 0.5
+            font_scale = 0.7
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(frame, name, (x1, y1 - 10), font, font_scale, (0, 0, 255), 1)
 
@@ -71,4 +93,6 @@ class CameraManager:
         cv2.destroyAllWindows()
 
     def get_embs(self, frame, face_locations):
+        if len(face_locations) == 0:
+            return []
         return self.get_embeddings.extract_embeddings(frame, face_locations)

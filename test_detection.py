@@ -2,9 +2,9 @@ import extract_embeddings
 import cv2
 import face_recognition
 import time
-import face_detection
+import ssd_detect
 
-ssd = face_detection.SSDFaceDetectorOpenCV()
+ssd = ssd_detect.SSDFaceDetectorOpenCV()
 
 image_path = "photo_test/10person.jpg"
 image = cv2.imread(image_path)

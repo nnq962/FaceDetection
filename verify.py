@@ -10,6 +10,7 @@ class VerifyFrame:
         :param json_folder: Thư mục chứa các file JSON với embeddings và tên người.
         """
         self.known_data = {}
+        self.name = []
 
         # Load embeddings từ các file JSON
         self.load_known_embeddings(json_folder)
@@ -39,23 +40,27 @@ class VerifyFrame:
         :param unknown_embeddings: List các embedding chưa biết.
         :return: List các tên tương ứng nếu khớp, nếu không thì trả về "Unknown".
         """
-        results = []
+
+        self.name = []
 
         for unknown_embedding in unknown_embeddings:
             name_found = "Unknown"
 
             for name, embeddings in self.known_data.items():
                 # So sánh từng embedding đã biết của một người
-                matches = face_recognition.compare_faces(embeddings, unknown_embedding, tolerance=0.35)
+                matches = face_recognition.compare_faces(embeddings, unknown_embedding, tolerance=0.4)
 
                 if True in matches:
                     # Nếu có kết quả khớp, gán tên và thoát khỏi vòng lặp
                     name_found = name
                     break
 
-            results.append(name_found)
+            self.name.append(name_found)
 
-        return results
+        return self.name
+    
+    def get_name(self):
+        return self.name
     
     
 

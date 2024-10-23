@@ -1,12 +1,11 @@
-import extract_embeddings
-import matplotlib.pyplot as plt
-import face_detection
+from deepface import DeepFace
 import cv2
+import time
 
-get_embs = extract_embeddings.FaceEmbeddingExtractor()
-image_path = "photo_test/nnq1.jpg"
+image_path = "photo_test/nnq_test.png"
 image = cv2.imread(image_path)
-ssd = face_detection.SSDFaceDetectorOpenCV()
 
-faces = ssd.detect_faces(image)
-get_embs.extract_embeddings(image, faces)
+start_time = time.time()
+result = DeepFace.represent(img_path=image_path)
+end_time = time.time()
+print(result, end_time - start_time)

@@ -1,13 +1,13 @@
 import os
 import json
 import cv2
-import face_detection
+import ssd_detect
 import extract_embeddings
 import numpy as np
 
 # Khởi tạo các đối tượng cần thiết
 get_embs = extract_embeddings.FaceEmbeddingExtractor()
-ssd = face_detection.SSDFaceDetectorOpenCV()
+ssd = ssd_detect.SSDFaceDetectorOpenCV()
 
 # Đường dẫn thư mục
 database_path = "database"
