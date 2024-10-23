@@ -2,12 +2,13 @@ import os
 import json
 import cv2
 import ssd_detect
+import mtcnn_detect
 import extract_embeddings
 import numpy as np
 
 # Khởi tạo các đối tượng cần thiết
 get_embs = extract_embeddings.FaceEmbeddingExtractor()
-ssd = ssd_detect.SSDFaceDetectorOpenCV()
+mtcnn = mtcnn_detect.MTCNNFaceDetector()
 
 # Đường dẫn thư mục
 database_path = "database"
@@ -21,7 +22,7 @@ if not os.path.exists(output_path):
 def extract_embeddings_from_image(image_path):
     image = cv2.imread(image_path)
     # Phát hiện vị trí khuôn mặt
-    face_locations = ssd.detect_faces(image)
+    face_locations = mtcnn.detect_faces(image)
     if len(face_locations):
         return get_embs.extract_embeddings(image, face_locations)
     else:
