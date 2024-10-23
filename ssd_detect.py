@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 
-prototxt_path = "ssd_model/deploy.prototxt"
-model_path = "ssd_model/res10_300x300_ssd_iter_140000.caffemodel"
+prototxt_path = "ssd_weights/deploy.prototxt"
+model_path = "ssd_weights/res10_300x300_ssd_iter_140000.caffemodel"
 
 class SSDFaceDetectorOpenCV:
     def __init__(self, threshold=0.95):

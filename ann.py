@@ -1,46 +1,59 @@
 import faiss
 import numpy as np
 
-np.random.seed(1)
+class FaissANN:
+    def __init__(self, dimension=128, use_gpu=False):
+        """
+        Khởi tạo FAISS ANN với phương pháp tìm kiếm L2 (IndexFlatL2).
+        :param dimension: Số chiều của vector embedding
+        :param use_gpu: Có sử dụng GPU hay không
+        """
+        self.dimension = dimension
+        self.use_gpu = use_gpu
 
-# Giả sử bạn có 100 embedding cho các hình ảnh trong database
-embeddings = np.random.random((100, 512)).astype('float32')  # (100, 512) 100 embedding với 512 chiều
+        # Sử dụng IndexFlatL2 (không cần huấn luyện)
+        self.index = faiss.IndexFlatL2(dimension)
 
-# Tạo một embedding mới cần kiểm tra
-test_embedding = np.random.random((1, 512)).astype('float32')
+        # Danh sách lưu trữ tất cả embeddings đã thêm
+        self.embeddings_list = []
 
+        # Nếu cần sử dụng GPU
+        if use_gpu:
+            res = faiss.StandardGpuResources()
+            self.index = faiss.index_cpu_to_gpu(res, 0, self.index)
 
-# Tạo chỉ mục FAISS với khoảng cách L2 (Euclidean distance)
-dimension = 512  # Kích thước của vector embedding
-index = faiss.IndexFlatL2(dimension)  # Chỉ mục sử dụng L2 cho tìm kiếm
+    def add_embeddings(self, embeddings):
+        """
+        Thêm các embedding vào chỉ mục FAISS.
+        :param embeddings: Một mảng numpy chứa các embedding (có kích thước [N, dimension])
+        """
+        assert embeddings.shape[1] == self.dimension, "Dimension mismatch!"
+        self.index.add(embeddings)
+        self.embeddings_list.append(embeddings)
 
-# Thêm các embedding vào chỉ mục FAISS
-index.add(embeddings)
+    def search(self, query_embedding, k=5):
+        """
+        Tìm kiếm các vector gần nhất với vector truy vấn.
+        :param query_embedding: Vector truy vấn có kích thước [1, dimension]
+        :param k: Số lượng hàng xóm gần nhất cần tìm
+        :return: Các chỉ số của k vector gần nhất và khoảng cách tương ứng
+        """
+        assert query_embedding.shape[1] == self.dimension, "Dimension mismatch!"
+        distances, indices = self.index.search(query_embedding, k)
+        return indices, distances
 
+    def get_nearest_embeddings(self, query_embedding, k=5):
+        """
+        Trả về danh sách các embedding gần nhất dựa trên chỉ số tìm kiếm.
+        :param query_embedding: Vector truy vấn có kích thước [1, dimension]
+        :param k: Số lượng hàng xóm gần nhất cần tìm
+        :return: Danh sách các embedding gần nhất
+        """
+        indices, _ = self.search(query_embedding, k)
+        nearest_embeddings = []
 
-# Tìm kiếm 5 embedding gần nhất với embedding kiểm tra
-k = 5  # Số lượng embedding gần nhất cần tìm
-D, I = index.search(test_embedding, k)  # D là khoảng cách, I là chỉ số của các embedding gần nhất
+        # Lấy các embedding gần nhất dựa vào chỉ số
+        for idx in indices[0]:
+            nearest_embeddings.append(self.embeddings_list[0][idx])
 
-# In kết quả
-print(f"Khoảng cách: {D}")
-print(f"Chỉ số của các embedding gần nhất: {I}")
-
-
-nearest_embedding = embeddings[I[0][0]]
-
-nlist = 10  # Số lượng phân vùng (với dữ liệu nhỏ bạn có thể chọn giá trị thấp)
-quantizer = faiss.IndexFlatL2(dimension)  # Chỉ mục L2 cho việc lượng tử hóa
-index = faiss.IndexIVFFlat(quantizer, dimension, nlist)  # Tạo chỉ mục IVF
-
-# Đào tạo chỉ mục (cần thiết với IndexIVFFlat)
-index.train(embeddings)
-
-# Thêm embedding vào chỉ mục
-index.add(embeddings)
-
-# Tìm kiếm embedding gần nhất với ANN
-D, I = index.search(test_embedding, k)
-
-print(f"Khoảng cách ANN: {D}")
-print(f"Chỉ số của các embedding gần nhất ANN: {I}")
+        return nearest_embeddings   

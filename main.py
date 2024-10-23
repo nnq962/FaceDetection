@@ -2,12 +2,12 @@ import camera
 import extract_embeddings
 import cv2
 import time
-import verify
+import verify_frame
 import numpy as np
 
-embedding_folder = 'embeddings'
-cam_manager = camera.CameraManager(camera_id=2, detector="mediapipe")
-verifier = verify.VerifyFrame(embedding_folder)
+embedding_folder = 'embeddings_data'
+cam_manager = camera.CameraManager(camera_id=0, detector="mediapipe")
+verifier = verify_frame.VerifyFrame(embedding_folder)
 
 # Lưu thời điểm bắt đầu
 start_time = time.time()
@@ -43,4 +43,3 @@ while True:
 
 # Giải phóng camera
 cam_manager.release()
-cv2.destroyAllWindows()
