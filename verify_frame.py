@@ -6,10 +6,11 @@ import pandas as pd
 
 
 class VerifyFrame:
-    def __init__(self, data_folder="embeddings_data"):
+    def __init__(self, data_folder="embeddings_data", threshold=0.4):
         """
         Khởi tạo lớp VerifyFrame và nạp dữ liệu embeddings và metadata.
         :param data_folder: Thư mục chứa các tệp embeddings và metadata.
+        :param threshold: Ngưỡng để xác định sự khớp trong so sánh mặt.
         """
         # Load known embeddings và tên từ metadata
         self.embeddings = np.load(os.path.join(data_folder, 'embeddings.npy'))
@@ -21,6 +22,7 @@ class VerifyFrame:
         self.faiss_ann.add_embeddings(self.embeddings)
 
         self.name = []
+        self.threshold = threshold  # Thêm thuộc tính threshold
     
     def verify(self, unknown_embeddings):
         """
@@ -29,7 +31,7 @@ class VerifyFrame:
         :return: List các tên tương ứng nếu khớp, nếu không thì trả về "Unknown".
         """
         self.name = []
- 
+
         for unknown_embedding in unknown_embeddings:
             name_found = "Unknown"
 
@@ -39,8 +41,9 @@ class VerifyFrame:
             # So sánh tất cả các known_embedding cùng một lúc
             known_embeddings = [embedding for embedding, _ in nearest_embeddings]
             known_names = [name for _, name in nearest_embeddings]
-            matches = face_recognition.compare_faces(known_embeddings, unknown_embedding, tolerance=0.4)
-
+            matches = face_recognition.compare_faces(
+                known_embeddings, unknown_embedding, tolerance=self.threshold
+            )
             # Tìm tên thứ nhất mà có kết quả khớp
             matched_names = [name for match, name in zip(matches, known_names) if match]
             if matched_names:

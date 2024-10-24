@@ -15,6 +15,9 @@ class FaceEmbeddingExtractor:
                               (Danh sách đang ở dạng [left, top, right, bottom])
         :return: Danh sách các vector embedding cho từng khuôn mặt.
         """
+        if not face_locations:
+            return []
+
         # Chuyển frame từ BGR sang RGB
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # TODO: change to numpy

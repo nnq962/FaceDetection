@@ -1,5 +1,4 @@
 import cv2
-import extract_embeddings
 import ssd_detect
 import mtcnn_detect
 import mediapipe_detect
@@ -18,9 +17,7 @@ class CameraManager:
         
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
-        
-        self.get_embeddings = extract_embeddings.FaceEmbeddingExtractor()
-        
+                
         # Xác định detector
         if detector is None or 'ssd':
             self.face_detection = ssd_detect.SSDFaceDetectorOpenCV()
@@ -31,9 +28,7 @@ class CameraManager:
         else:
             raise ValueError("Unknown detector type")
         
-        print("================", detector, "================")
-
-        self.embeddings = None
+        print("===================", detector, "===================")
 
     def get_frame(self, flip_code=None):
         """
@@ -91,8 +86,3 @@ class CameraManager:
         """
         self.cap.release()
         cv2.destroyAllWindows()
-
-    def get_embs(self, frame, face_locations):
-        if len(face_locations) == 0:
-            return []
-        return self.get_embeddings.extract_embeddings(frame, face_locations)
