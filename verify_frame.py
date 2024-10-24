@@ -39,7 +39,7 @@ class VerifyFrame:
             # So sánh tất cả các known_embedding cùng một lúc
             known_embeddings = [embedding for embedding, _ in nearest_embeddings]
             known_names = [name for _, name in nearest_embeddings]
-            matches = face_recognition.compare_faces(known_embeddings, unknown_embedding, tolerance=0.4)
+            matches = face_recognition.compare_faces(known_embeddings, unknown_embedding, tolerance=0.6)
 
             # Tìm tên thứ nhất mà có kết quả khớp
             matched_names = [name for match, name in zip(matches, known_names) if match]
