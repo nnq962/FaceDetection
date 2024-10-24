@@ -31,8 +31,9 @@ while True:
         # Cập nhật thời gian bắt đầu cho lần sau
         start_time = current_time
 
-    # Vẽ các bounding box khuôn mặt
-    frame_with_faces = cam_manager.draw_faces(frame, boxes, verifier.get_name())
+    # Sử dụng kết quả xác minh để vẽ tên
+    names = result if result else ["Unknown"] * len(boxes)
+    frame_with_faces = cam_manager.draw_faces(frame, boxes, names)
 
     # Hiển thị frame
     cv2.imshow('Camera with Face Detection', frame_with_faces)  
@@ -43,3 +44,5 @@ while True:
 
 # Giải phóng camera
 cam_manager.release()
+
+cv2.destroyAllWindows()
